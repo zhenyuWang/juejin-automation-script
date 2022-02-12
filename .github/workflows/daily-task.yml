@@ -25,11 +25,7 @@ jobs:
       - name: npm install
         run: |
           npm install
-        env:
-          CI: true
 
       - name: 运行脚本
         run: |
           npm start
-        env:
-          CI: true
