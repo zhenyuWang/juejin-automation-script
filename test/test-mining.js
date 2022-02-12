@@ -1,8 +1,6 @@
-const dotEnv = require('dotEnv')
-dotEnv.config('./env')
-const dig = require('../src/api/dig')
+const miningApi = require('../src/api/mining')()
 
-dig
+miningApi
   .getUser()
   .then((data) => {
     console.log('daya', data.user_id)

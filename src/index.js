@@ -1,54 +1,43 @@
-const dotEnv = require('dotEnv')
-dotEnv.config('./env')
-
-const { COOKIE, TOKEN, SendKey } = require('./utils/config.js')
-const sendMessage = require('./utils/message')
-const juejin = require('./api/juejin')
-const dig = require('./api/dig')
+const { COOKIE, TOKEN } = require('./utils/config.js')
+const message = require('./utils/message')
+const jueJinApi = require('./api/juejin')()
+const miningApi = require('./api/mining')()
 const jwt = require('jsonwebtoken')
-const digInitData = require('./data/digInitData.json')
+const firstData = require('./utils/first')
 
 if (!COOKIE) {
-  sendMessage(SendKey, '掘金自动化脚本失败', '获取cookie失败，请检查设置')
+  message('获取不到cookie，请检查设置')
 } else {
   async function junJin() {
     try {
-      // 签到
-      await juejin.signIn()
-      // 抽奖
-      const lotteryDrawRes = await juejin.lotteryDraw(),
-        dipParams = { lottery_history_id: '7057392414754865156' },
-        // dipParams = { lottery_history_id: '7057551468475187203' },
-        // 沾喜气
-        dipResult = await juejin.dipLucky(dipParams)
-      sendMessage(
-        SendKey,
-        '掘金签到+抽奖成功',
-        `抽奖成功，获得：${lotteryDrawRes.lottery_name}; 获取幸运点${dipResult.dip_value}, 当前幸运点${dipResult.total_value}`
+      // 先执行签到、抽奖以及沾喜气
+      await jueJinApi.checkIn() // 抽奖一次
+      const drawResult = await jueJinApi.drawApi()
+      const dipParams = { lottery_history_id: '7052109119238438925' }
+      const dipResult = await jueJinApi.dipLucky(dipParams)
+      message(
+        `抽奖成功，获得：${drawResult.lottery_name}; 获取幸运点${dipResult.dip_value}, 当前幸运点${dipResult.total_value}`
       )
     } catch (e) {
-      message(SendKey, '掘金签到+抽奖失败', `有异常，请手动操作,${e.message}`)
+      message(`有异常，请手动操作,${e.message}`)
     }
   }
-  junJin()
+  junJin().then(() => {})
 }
 
-let juejinUid = ''
+let juejinUid = '4212984285249245'
 
 if (!(COOKIE && TOKEN)) {
-  message(SendKey, '掘金挖矿失败', '获取cookie或者token失败，请检查设置')
+  message('获取不到游戏必须得COOKIE和TOKEN，请检查设置')
 } else {
-  // 初始化信息
-  let gameId = '',
-    deep = 0,
-    todayDiamond = 0,
-    todayLimitDiamond = 0
+  let gameId = '' // 发指令必须得gameId
+  let deep = 0
+  let todayDiamond = 0
+  let todayLimitDiamond = 0
   async function getInfo() {
     const time = new Date().getTime()
-    const userInfo = await dig.getUser()
-    juejinUid = userInfo.user_id
 
-    const resInfo = await dig.getInfo(juejinUid, time)
+    const resInfo = await miningApi.getInfo(juejinUid, time)
     deep = resInfo.gameInfo ? resInfo.gameInfo.deep : 0
     gameId = resInfo.gameInfo ? resInfo.gameInfo.gameId : 0
     todayDiamond = resInfo.userInfo.todayDiamond || 0
@@ -75,14 +64,17 @@ if (!(COOKIE && TOKEN)) {
       const startParams = {
         roleId: 3
       }
-      const startData = await dig.start(startParams, juejinUid, startTime)
+      const startData = await miningApi.start(startParams, juejinUid, startTime)
       await sleep(3000)
       console.log('startData', startData)
       gameId = startData.gameId
       // 发起指令
       const commandTime = +new Date().getTime()
+      const commandParams = {
+        command: firstData.command
+      }
       const xGameId = getXGameId(gameId)
-      const commandData = await dig.command(digInitData, juejinUid, commandTime, xGameId)
+      const commandData = await miningApi.command(commandParams, juejinUid, commandTime, xGameId)
       deep = commandData.curPos.y
       await sleep(3000)
       console.log('commandData', commandData)
@@ -91,7 +83,7 @@ if (!(COOKIE && TOKEN)) {
       const overParams = {
         isButton: 1
       }
-      const overData = await dig.over(overParams, juejinUid, overTime)
+      const overData = await miningApi.over(overParams, juejinUid, overTime)
       await sleep(3000)
       console.log('overData', overData)
       deep = overData.deep
@@ -99,7 +91,7 @@ if (!(COOKIE && TOKEN)) {
       const mapTime = +new Date().getTime()
       if (deep < 500) {
         await sleep(3000)
-        await dig.freshMap({}, juejinUid, mapTime)
+        await miningApi.freshMap({}, juejinUid, mapTime)
       }
       await sleep(3000)
       await getInfo().then((res) => {
@@ -119,7 +111,7 @@ if (!(COOKIE && TOKEN)) {
       const overParams = {
         isButton: 1
       }
-      await dig.over(overParams, juejinUid, overTime)
+      await miningApi.over(overParams, juejinUid, overTime)
       await sleep(3000)
       await getInfo().then((res) => {
         if (todayDiamond < todayLimitDiamond) {

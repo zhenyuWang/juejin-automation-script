@@ -1,19 +1,15 @@
 {
-  "name": "juejing-automation-script",
+  "name": "juejin-automation-script",
   "version": "1.0.0",
-  "description": "掘金每日自动签到、抽奖、挖矿",
-  "author": "running snail",
   "license": "MIT",
-  "main": "./src/index",
   "scripts": {
     "start": "node ./src/index",
-    "test:dig": "node ./test/dig",
-    "test:juejin": "node ./test/juejin"
+    "test:mining": "node ./test/test-mining",
+    "test:juejin": "node ./test/test-juejin"
   },
+  "main": "./src/index",
   "dependencies": {
     "axios": "^0.24.0",
-    "dotenv": "^10.0.0",
-    "express": "^4.17.2",
     "jsonwebtoken": "^8.5.1"
   },
   "devDependencies": {}
