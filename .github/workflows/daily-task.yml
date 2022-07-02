@@ -3,7 +3,7 @@ on:
   push:
   schedule:
     # `分 时 天 月 周` 时按照标准时间 北京时间=标准时间+8 25表示北京时间上午9点
-    - cron: '0 25 * * *'
+    - cron: '0 1 * * *'
 jobs:
   check_in:
     runs-on: ubuntu-latest
